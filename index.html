@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F2A33">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Telehandler">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Reporte de turno Telehandler</title>
+<!-- Cascarón mínimo: las pantallas se arman en app/app.js; el maestro se lee del Excel en el aparato y nunca se sube al repositorio. -->
+<link rel="stylesheet" href="app/styles.css">
+</head>
+<body>
+<div id="raiz"></div>
+<script src="app/vendor/xlsx.full.min.js"></script>
+<script src="app/vendor/jspdf.umd.min.js"></script>
+<script src="app/vendor/jszip.min.js"></script>
+<script src="app/i18n.js"></script>
+<script src="app/maestro.js"></script>
+<script src="app/pdf.js"></script>
+<script src="app/app.js"></script>
+</body>
+</html>
