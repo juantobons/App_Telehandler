@@ -27,8 +27,9 @@ async function cargarFuentes(doc) {
 
 const PDF_INICIO = '### DATOS_BD_TELEHANDLER ###', PDF_FIN = '### FIN_DATOS_BD ###';
 
-async function generarPDF(r) {
-  if (!$('toast').classList.contains('on')) msg('Generando PDF…');   // no tapar un aviso de validar()
+async function generarPDF(r, modo = 'descargar') {
+  const aviso = $('toast').classList.contains('on');   // aviso de validar() abierto: no taparlo
+  if (!aviso) msg(B('Generando PDF…', '正在生成PDF…'));   // no tapar un aviso de validar()
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 210, H = 297, M = 14, OSC = [31, 42, 51], AMB = [255, 102, 0];
@@ -161,7 +162,9 @@ async function generarPDF(r) {
     doc.text(`${o.ID} · ${Z('generado', '生成')} ${new Date().toLocaleString('es-CO')} · App v${APP_V}`, M, H - 6);
     doc.text(`${Z('Página', '页')} ${i} / ${n}`, W - M, H - 6, { align: 'right' });
   }
-  await entregar(doc.output('blob'), nombrePDF(r));
+  const blob = doc.output('blob');
+  if (!(await entregar(blob, nombrePDF(r), modo))) { msg(B('No se envió. El reporte sigue guardado; puede descargar o compartir el PDF otra vez.', '未发送。报告已保存，可再次下载或分享PDF。')); return; }
+  if (modo === 'descargar' && !aviso) msg(B(`PDF descargado: ${nombrePDF(r)} (carpeta Descargas)`, `PDF已下载：${nombrePDF(r)}（「下载」文件夹）`), true);
   // Se marca que el PDF salió (sin cambiar «modificado») para mostrar «PDF generado» en la lista
   r.pdfTs = new Date().toISOString(); const c = { ...r }; delete c._nuevo; delete c._sucio; await DB.put('registros', c);
 }

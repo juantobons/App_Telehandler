@@ -88,12 +88,14 @@ const blobURL = b => new Promise((ok, ko) => { const r = new FileReader(); r.onl
 function urlBlob(u) { const [a, b] = u.split(','); const bin = atob(b), arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); return new Blob([arr], { type: a.match(/:(.*?);/)[1] }); }
 function descargar(blob, nombre) { const u = URL.createObjectURL(blob), a = h('a', { href: u, download: nombre }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000); }
 /** En el celular abre el menú Compartir (WhatsApp, Teams, correo); si no se puede, descarga. */
-async function entregar(blob, nombre) {
+/** Entrega un archivo: «compartir» abre Compartir del celular (WhatsApp…); si no se puede, lo descarga.
+ *  Devuelve false solo si la persona cerró Compartir sin enviar. */
+async function entregar(blob, nombre, modo = 'compartir') {
   const f = new File([blob], nombre, { type: blob.type });
-  if (navigator.canShare && navigator.canShare({ files: [f] })) {
-    try { await navigator.share({ files: [f], title: nombre }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  if (modo === 'compartir' && navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: nombre }); return true; } catch (e) { if (e.name === 'AbortError') return false; }
   }
-  descargar(blob, nombre);
+  descargar(blob, nombre); return true;
 }
 /** Foto a máx. 1600 px, JPEG 72 %: ~150–300 KB, se lee bien el horómetro. */
 async function comprimir(file) {
@@ -264,8 +266,11 @@ async function vLista(main) {
       h('div', { class: 'btns', style: 'gap:6px' },
         duplicado(r) ? h('span', { class: 'est mal' }, 'Duplicado · 重复') : null,
         pdfPendiente(r) ? h('span', { class: 'est' }, r.pdfTs ? 'Cambió después del PDF · PDF后有修改' : 'PDF pendiente · PDF待生成') : h('span', { class: 'est ok' }, 'PDF generado · PDF已生成')),
-      firm ? null : h('button', { class: 'btn peq', type: 'button', onclick: e => { e.stopPropagation(); r._aFirmas = true; ir('editar', r); } },
-        enVentana(r) ? 'Firmar ahora · 立即签名' : 'Firmar (fuera del horario del turno) · 签名（班次时间外）')));
+      h('div', { class: 'btns', style: 'gap:6px' },
+        firm ? null : h('button', { class: 'btn peq', type: 'button', onclick: e => { e.stopPropagation(); r._aFirmas = true; ir('editar', r); } },
+          enVentana(r) ? 'Firmar ahora · 立即签名' : 'Firmar (fuera del horario del turno) · 签名（班次时间外）'),
+        r.firmaOp ? h('button', { class: 'btn peq', type: 'button', onclick: e => { e.stopPropagation(); if (validar(r)) generarPDF(r, 'descargar'); } }, '⬇ PDF · 下载') : null,
+        r.firmaOp ? h('button', { class: 'btn peq', type: 'button', onclick: e => { e.stopPropagation(); if (validar(r)) generarPDF(r, 'compartir'); } }, 'WhatsApp · 分享') : null)));
   }
   main.append(ul);
 }
@@ -431,9 +436,10 @@ async function vForm(main) {
       firma(L('Vo.Bo. empresa (encargado)', '单位审核签字（负责人）'), 'firmaEnc', 'enc')), { id: 'firmas' }),
 
     h('div', { class: 'guardar' },
-      h('button', { class: 'btn pri', onclick: async () => { r._sucio = true; await guardarYa(); if (validar(r)) generarPDF(r); } }, 'Generar PDF · 生成PDF'),
+      h('button', { class: 'btn pri', onclick: async () => { if (!r.modificado) r._sucio = true; await guardarYa(); if (validar(r)) generarPDF(r, 'descargar'); } }, 'Descargar PDF · 下载PDF'),
+      h('button', { class: 'btn pri', style: 'background:#25D366;border-color:#25D366', onclick: async () => { if (!r.modificado) r._sucio = true; await guardarYa(); if (validar(r)) generarPDF(r, 'compartir'); } }, 'Compartir PDF (WhatsApp) · 分享PDF'),
       h('div', { class: 'btns' },
-        h('button', { class: 'btn osc', onclick: async () => { r._sucio = true; await guardarYa(); msg(B('Reporte guardado', '报告已保存'), true); ir('lista'); } }, 'Guardar · 保存'),
+        h('button', { class: 'btn osc', onclick: async () => { if (!r.modificado) r._sucio = true; await guardarYa(); msg(B('Reporte guardado', '报告已保存'), true); ir('lista'); } }, 'Guardar · 保存'),
         h('button', { class: 'btn mal', onclick: () => eliminar(r) }, 'Eliminar · 删除'))));
   // Las cajas de texto también actualizan los nombres bajo la firma
   refrescar();
@@ -478,7 +484,7 @@ async function fotos(r, tipo, varias) {
     if (varias || !fs.length) {
       const inp = h('input', { type: 'file', accept: 'image/*', multiple: varias || null, hidden: true, onchange: async e => {
         const lista = [...e.target.files]; if (!lista.length) return;
-        r._sucio = true; await guardarYa();        // la foto necesita que el reporte exista
+        if (!r.modificado) r._sucio = true; await guardarYa();        // la foto necesita que el reporte exista
         let o = fs.length ? Math.max(...fs.map(x => x.orden)) + 1 : 0;
         for (const file of lista) {
           try { await DB.put('fotos', { id: uid(), regId: r.id, tipo, orden: o++, blob: await comprimir(file), fecha: new Date().toISOString() }); }
