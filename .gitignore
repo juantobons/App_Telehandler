@@ -1,0 +1,21 @@
+# Nunca subir datos reales al repositorio
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.pdf
+*.jpg
+*.jpeg
+*.heic
+*.json.bak
+respaldo*.json
+datos/
+node_modules/
+.DS_Store
+Thumbs.db
+# Excepción: maestro de ejemplo con datos ficticios
+!ejemplo/Maestro_ejemplo.xlsx
+
+# Documentación interna: no se publica
+README.md
+*.md
